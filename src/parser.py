@@ -1,6 +1,9 @@
 # Shlomi Ben-Shushan 311408264
 
 
+import numpy as np
+
+
 class VotingRecord:
 
     def __init__(self, municipality, cluster, total_votes, vector):
@@ -27,7 +30,7 @@ def parse(file_path):
         municipality = values[0]
         cluster = int(values[1])
         total_votes = int(values[2])
-        voting_vector = [int(i) for i in values[3:]]
+        voting_vector = np.array([int(i) for i in values[3:]])
         local_max = max(voting_vector)
         if local_max > max_votes:
             max_votes = local_max
