@@ -1,15 +1,14 @@
 # Shlomi Ben-Shushan 311408264
 
 
-class Node:
-
+class Cell:
     def __init__(self, i, j):
         self.pos = (i, j)
-        self.pointer = None
+        self.neuron = None
         self.neighbors = []
 
     def __str__(self):
-        return f'Node {self.pos} points to: {self.pointer}'
+        return f'Cell {self.pos} holds: {self.neuron}'
 
     def is_in(self, group):
         for x in group:
@@ -19,18 +18,15 @@ class Node:
 
 
 class HexagonalGrid:
-
     def __init__(self, size):
-        first_row = [Node(0, j) for j in range(size)]
-        for j in range(len(first_row) - 1):
+        first_row = [Cell(0, j) for j in range(size)]
+        for j in range(size - 1):
             first_row[j].neighbors.append(first_row[j + 1])
             first_row[j + 1].neighbors.append(first_row[j])
         self.rows = [first_row]
         for i in range(1, size):
-            new_row = [Node(i, j) for j in range(size + i)]
-            for j in range(len(new_row)):
-                if j == len(new_row) - 1:
-                    break
+            new_row = [Cell(i, j) for j in range(size + i)]
+            for j in range(size + i - 1):
                 new_row[j].neighbors.append(self.rows[i - 1][j])
                 new_row[j + 1].neighbors.append(self.rows[i - 1][j])
                 new_row[j].neighbors.append(new_row[j + 1])
@@ -40,8 +36,8 @@ class HexagonalGrid:
             self.rows.append(new_row)
         max_size = len(self.rows[-1])
         k = 1
-        for i in range(size, 2 * size - 1):
-            new_row = [Node(i, j) for j in range(max_size - k)]
+        for i in range(size, max_size):
+            new_row = [Cell(i, j) for j in range(max_size - k)]
             k += 1
             for j in range(len(new_row)):
                 new_row[j].neighbors.append(self.rows[i - 1][j])
@@ -58,8 +54,8 @@ class HexagonalGrid:
         string = ''
         for i, row in zip(range(len(self.rows)), self.rows):
             string += f'Row {i}:\n'
-            for j, node in zip(range(len(row)), row):
-                string += f'  Col {j}: ' + node.__str__() + '\n'
+            for j, cell in zip(range(len(row)), row):
+                string += f'  Col {j}: ' + cell.__str__() + '\n'
             string += '\n'
         return string
 
