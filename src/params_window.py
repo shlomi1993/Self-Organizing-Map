@@ -6,6 +6,7 @@
 
 
 from src.style import fonts, colors
+from src.analyze_window import invalid_input_message
 from tkinter import Tk, Entry, Label, Button, Frame
 
 
@@ -71,9 +72,19 @@ def pop_params_window(parent):
 
     # 'Set' Button definition.
     def on_set():
-        parent.epochs = win.epochs.get().strip()
-        parent.lr = win.lr.get().strip()
-        win.destroy()
+        epochs = win.epochs.get().strip()
+        lr = win.lr.get().strip()
+        try:
+            epochs = int(epochs)
+            lr = float(lr)
+            if lr < 0 or epochs < 1:
+                raise ValueError
+            parent.epochs = epochs
+            parent.lr = lr
+            win.destroy()
+        except ValueError:
+            invalid_input_message()
+
     set_btn = Button(
         master=win.params_frame,
         width=8,

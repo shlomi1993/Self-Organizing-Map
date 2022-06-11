@@ -135,7 +135,6 @@ def pop_analyze_window(parent):
             parent.end_lr = elr
             parent.step_lr = step
             parent.epochs = epochs
-            parent.params_set = True
             win.destroy()
             parsed = parse(parent.file)
             eval_errors(parsed, parent.start_lr, parent.end_lr, parent.step_lr, parent.epochs, parent.console)
