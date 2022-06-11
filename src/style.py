@@ -1,8 +1,14 @@
 # Shlomi Ben-Shushan 311408264
 
+
+# File: style.py
+# Content: Fonts, colors and scale for easy controlling the theme (like CSS).
+
+
 class Fonts:
     def __init__(self):
         self.regular = ('Consolas', 12)
+        self.io = ('Consolas', 17)
         self.bold = ('Consolas', 12, 'bold')
         self.big = ('Consolas', 16)
         self.small = ('Consolas', 10)
@@ -10,9 +16,11 @@ class Fonts:
 
 class Colors:
     def __init__(self):
-        self.app = '#C9FBFF'
-        self.console_bg = '#012456'
-        self.console_text = '#ffffff'
+        self.app = '#302c34'
+        self.io_bg = '#282c34'
+        self.io_text = '#ffffff'
+        self.button = '#3d424b'
+        self.button_prime = '#568af2'
         self.notes = '#C2FCF7'
         self.outlines = '#57737A'
         self.highlight = '#1f7db7'
@@ -20,8 +28,11 @@ class Colors:
         self.white = '#ffffff'
 
 
+# The whole program can use one instance of each class.
 fonts = Fonts()
 colors = Colors()
+
+# This scale helps to determine the colors of the clusters in the assignments.
 scale = {
     0: '#ffffff',
     1: '#9e0142',

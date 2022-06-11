@@ -1,40 +1,80 @@
 # Shlomi Ben-Shushan 311408264
 
 
+# File: som.py
+# Content: Self-Organized-Map algorithm implementation.
+
+
 import numpy as np
 from src.hexagonal import HexagonalGrid
-
-
-class Representative:
-    def __init__(self, cell, distance):
-        self.cell = cell
-        self.distance = distance  # for Quantization Error.
-        self.validator = None  # for Topological Error.
+from src.evaluation import quantization_error, topological_error
 
 
 def init_weights(grid, low, high, length):
+    """
+    This function gets a hexagonal grid and initialized its neurons to
+    randomized vectors of integers.
+    :param grid: an instance of HexagonalGrid.
+    :param low: the lowest number to sample.
+    :param high: the highest number to sample.
+    :param length: the dimension of the vector.
+    :return:
+    """
     for row in grid:
         for cell in row:
             cell.neuron = np.random.randint(low=low, high=high, size=length)
 
 
 def RMSD(V, N):
-    delta = np.floor(V - N)  # avoid overflow
-    return np.sqrt(np.mean(np.square(delta)))  # maybe mean?
+    """
+    Stands for Root-Mean-Square-Deviation. This functions calculates the RMS of
+    the difference between to given vectors using NumPy.
+    :param V: vector number 1 (from a VotingRecord).
+    :param N: vector number 2 (A Cell's neuron).
+    :return:
+    """
+    delta = np.floor(V - N)  # to avoid overflow
+    return np.sqrt(np.mean(np.square(delta)))  # better mean then sum.
 
 
-def update_weights(grid, representatives, lr):
-    for vr, rep in representatives.items():
-        Nk = rep.cell
-        i, j = Nk.pos[0], Nk.pos[1]
-        error = vr.vector - Nk.neuron
+def find_bmu(grid, vr):
+    """
+    The Best Matching Unit, or BMU, is the neuron in the grid closest to the
+    given vector according to RMSD function.
+    :param grid: an instance of HexagonalGrid.
+    :param vr: a VotingRecord instance.
+    :return:
+    """
+    candidates = []
+    for row in grid:
+        for cell in row:
+            distance = RMSD(V=vr.vector, N=cell.neuron)
+            candidates.append((cell, distance))
+    candidates.sort(key=lambda tup: tup[1])
+    bmu = candidates[0][0]
+    validator = candidates[1][0]  # Second best for Topo. Error calculation.
+    return bmu, validator
+
+
+def update_weights(grid, reps, lr):
+    """
+    This function updates the neurons in the grid by applying the update rule
+    as shown in class.
+    :param grid: an instance of HexagonalGrid.
+    :param reps: a map from VR to its representative (or BMU).
+    :param lr: the learning rate.
+    :return:
+    """
+    for vr, (bmu, _) in reps.items():
+        i, j = bmu.pos[0], bmu.pos[1]
+        error = vr.vector - bmu.neuron
         neighborhood = grid.get_neighborhood_of(i, j, 2)
         layer1 = neighborhood[1]
         layer2 = neighborhood[2]
         addend0 = lr * 0.3 * error
         addend1 = lr * 0.2 * error
         addend2 = lr * 0.1 * error
-        grid[i][j].neuron = Nk.neuron + addend0
+        grid[i][j].neuron = bmu.neuron + addend0
         for N in layer1:
             grid[N.pos[0]][N.pos[1]].neuron = N.neuron + addend1
         for N in layer2:
@@ -42,45 +82,53 @@ def update_weights(grid, representatives, lr):
 
 
 def train(data, epochs=10, learning_rate=0.1, decay=0.1):
-    voting_records, mapper, max_votes = data
+    """
+    This function creates an instance of HexagonalGrid, initializes its neurons
+    (or weights), and then trains the model. In the end, it returns the solution
+    for each epoch, and the model (i.e., the latest grid). This function also
+    calculates the errors in each epoch.
+    :param data: parsed and preprocessed data from the given input file.
+    :param epochs: the number of iterations to run the network.
+    :param learning_rate: the initial learning rate.
+    :param decay: a decay factor for the learning rate.
+    :return: a list of solution per epoch, a model and lists of errors.
+    """
+    voting_records, _, _ = data
     lr = learning_rate
-    grid = HexagonalGrid(size=5)
-    init_weights(grid, 0, 200, len(voting_records[0].vector))
-    representatives = {}
+    model = HexagonalGrid(size=5)
+    init_weights(model, 0, 200, len(voting_records[0].vector))
     solutions = []
+    q_errors = []
+    t_errors = []
     for t in range(epochs):
         np.random.shuffle(voting_records)  # to avoid bias.
-        for vr in voting_records:
-            candidates = []
-            for row in grid:
-                for cell in row:
-                    distance = RMSD(V=vr.vector, N=cell.neuron)
-                    candidates.append(Representative(cell, distance))
-            candidates.sort(key=lambda r: r.distance)
-            chosen = candidates[0]
-            chosen.validator = candidates[1].cell
-            representatives[vr] = chosen
-        solutions.append(representatives)
-        update_weights(grid, representatives, lr)
+        reps = {vr: find_bmu(model, vr) for vr in voting_records}
+        q_errors.append(quantization_error(reps))
+        t_errors.append(topological_error(reps))
         lr *= np.exp(-t * decay)
-    positions = []
-    for row in grid:
-        for cell in row:
-            positions.append(cell.pos)
-    return solutions, positions
+        update_weights(model, reps, lr)
+        solutions.append(reps)
+    return solutions, model, q_errors, t_errors
 
 
 def analyze(results, positions):
+    """
+    This function gets a solution resulted by train() function and analyze it.
+    :param results: a solution from train() function.
+    :param positions: a list of the model's grid position for east access.
+    :return: two dictionaries - one maps from a name of a town to a tuple if its
+    cluster and the latest BMU, and the seconds maps from a cell position to a
+    tuple of the represented vectors and their average cluster number (rounded)
+    """
     temp = {}
     town_to_cell = {}
     cell_to_vectors = {}
-    for vr, rn in results.items():
-        p = rn.cell.pos
-        if p in temp.keys():
-            temp[p].append(vr)
+    for vr, (bmu, _) in results.items():
+        if bmu.pos in temp.keys():
+            temp[bmu.pos].append(vr)
         else:
-            temp[p] = [vr]
-        town_to_cell[vr.town] = (vr.cluster, rn.cell)
+            temp[bmu.pos] = [vr]
+        town_to_cell[vr.town] = (vr.cluster, bmu)
     for p in positions:
         if p in temp.keys():
             vrs = temp[p]
