@@ -55,7 +55,7 @@ def parse(file_path):
         total = int(values[2])
         arr = [int(i) for i in values[3:]]
         arr.append(total - sum(arr))
-        vector = np.array(arr)
+        vector = np.array(arr, dtype=np.float)
         max_votes = max(max_votes, max(vector))
         voting_records.append(VotingRecord(municipality, cluster, vector))
     return voting_records, mapper, max_votes

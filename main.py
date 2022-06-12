@@ -13,5 +13,4 @@ if __name__ == '__main__':
     app.mainloop()
 
 
-# Todo: Verify formulas -- 12/6
 # Todo: Write report -- 13/6

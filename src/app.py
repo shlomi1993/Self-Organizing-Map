@@ -5,25 +5,28 @@
 # Content: All the definitions and settings regard to the application.
 
 
+import os
 from ntpath import basename
-from tkinter import Tk, Text, Button, Frame, Canvas, filedialog, messagebox
+from tkinter import Tk, Text, Button, Radiobutton, Frame, Label, IntVar, Entry
+from tkinter import Canvas, filedialog, messagebox
 from prettytable import PrettyTable
 from src.parser import parse
 from src.som import train, analyze
-from src.evaluation import plot_errors_per_epoch
+from src.evaluation import quantization_error, topological_error, plot
 from src.style import fonts, colors, scale
-from src.analyze_window import pop_analyze_window
-from src.params_window import pop_params_window
 
 
-WINDOW_H = 720
 WINDOW_W = 1150
+WINDOW_H = 720
 CANVAS_H = 690
 CANVAS_W = 690
 
 SIZE_S = 12
 SIZE_M = round(1.5 * SIZE_S)
 SIZE_M_PAD = SIZE_M + 2  # padding
+
+QE = 'Quantization Error'
+TE = 'Topological Error'
 
 CANVAS: Canvas
 CELLS: dict
@@ -110,16 +113,6 @@ def info(towns):
     return t_towns
 
 
-def no_input_message():
-    """
-    This function pops a "no input" info message.
-    :return:
-    """
-    title = 'Hint'
-    msg = 'Make sure you have selected an input file first.'
-    messagebox.showinfo(title, msg)
-
-
 class App(Tk):
     """
     This class inherits the Tk (-inter) class that creates a basic app with
@@ -150,7 +143,7 @@ class App(Tk):
             width=CANVAS_W,
             height=CANVAS_H
         )
-        self.canvas.place(relx=0.38, rely=0.01)
+        self.canvas.place(relx=0.38, rely=0.02)
         global CANVAS
         CANVAS = self.canvas
         self.canvas.bind('<Motion>', motion)
@@ -158,12 +151,12 @@ class App(Tk):
         # Create a console
         self.console = Text(
             master=self,
-            height=37,
+            height=30,
             width=50,
             bg=colors.io_bg,
             fg=colors.io_text
         )
-        self.console.place(relx=0.01, rely=0.01)
+        self.console.place(relx=0.01, rely=0.02)
         welcome = 'Hi,\n\nThis program created by Shlomi Ben-Shushan.' \
                   '\nPlease select a valid CSV input file.\nThen click "Run".\n'
         self.console.insert('end', welcome)
@@ -174,24 +167,24 @@ class App(Tk):
             master=self,
             bg=colors.app,
         )
-        self.config.place(relx=0.01, rely=0.861)
+        self.config.place(relx=0.01, rely=0.71)
 
-        # Create a browse frame.
+        # Browse frame.
+        self.file = ''
         self.browse_frame = Frame(
             master=self.config,
             bg=colors.app,
         )
-
-        # Browse label and button.
         self.browse_frame.pack()
-        self.file = ''
+
+        # Browse label and text-area.
         self.browse_btn = Button(
             master=self.browse_frame,
             width=14,
             bg=colors.button,
             fg=colors.white,
             relief='raised',
-            font=fonts.bold,
+            font=fonts.regular,
             text='Select File',
             command=self.__browse
         )
@@ -207,56 +200,126 @@ class App(Tk):
         self.file_name_area.bind('<Key>', lambda e: 'break')
         self.file_name_area.grid(row=0, column=2, padx=15, sticky='w')
 
-        # Create another frame for analyze, set parameters and run buttons.
-        self.buttons_frame = Frame(
+        # Settings frame.
+        self.settings_frame = Frame(
             master=self.config,
             bg=colors.app,
         )
-        self.buttons_frame.pack(side='left')
+        self.settings_frame.pack(side='left')
 
-        # Analyze button.
-        self.start_lr = 0.01
-        self.end_lr = 1.0
-        self.step_lr = 0.05
-        self.analyze_btn = Button(
-            master=self.buttons_frame,
-            width=14,
-            bg=colors.button,
+        # Epoch label and entry.
+        Label(
+            master=self.settings_frame,
+            font=fonts.regular,
+            bg=colors.app,
             fg=colors.white,
-            relief='raised',
-            font=fonts.bold,
-            text='Analyze LR',
-            command=self.__analyze
+            text='Epochs:        '
+        ).grid(row=0, column=0, padx=5, pady=10, sticky='w')
+        self.epochs = Entry(
+            master=self.settings_frame,
+            font=fonts.regular,
+            width=9,
+            bg=colors.io_bg,
+            fg=colors.io_text,
+            justify='center'
         )
-        self.analyze_btn.grid(row=0, column=0, pady=12, sticky='w')
+        self.epochs.insert(0, '10')
+        self.epochs.grid(row=0, column=1, padx=0, pady=5, sticky='w')
 
-        # Set parameters button.
-        self.epochs = 10
-        self.lr = 0.1
-        self.params_btn = Button(
-            master=self.buttons_frame,
-            width=14,
-            bg=colors.button,
+        # Error type label and radio-buttons.
+        self.error_type_var = IntVar()
+        self.error_type = TE
+        Label(
+            master=self.settings_frame,
+            font=fonts.regular,
+            bg=colors.app,
             fg=colors.white,
-            relief='raised',
-            font=fonts.bold,
-            text='Set Params',
-            command=self.__set_params
+            text='Error Type:'
+        ).grid(row=1, column=0, padx=5, pady=2, sticky='w')
+        def choose_error_type():
+            self.error_type = TE if int(self.error_type_var.get()) else QE
+        r1 = Radiobutton(
+            master=self.settings_frame,
+            text=QE,
+            bg=colors.app,
+            fg=colors.white,
+            activebackground=colors.app,
+            activeforeground=colors.white,
+            selectcolor=colors.black,
+            variable=self.error_type_var,
+            value=0,
+            command=choose_error_type
         )
-        self.params_btn.grid(row=0, column=1, padx=15, pady=12, sticky='s')
+        r1.deselect()
+        r1.grid(row=1, column=1, padx=2, pady=2, sticky='w')
+        r2 = Radiobutton(
+            master=self.settings_frame,
+            text=TE,
+            bg=colors.app,
+            fg=colors.white,
+            activebackground=colors.app,
+            activeforeground=colors.white,
+            selectcolor=colors.black,
+            variable=self.error_type_var,
+            value=1,
+            command=choose_error_type
+        )
+        r2.select()
+        r2.grid(row=1, column=2, padx=2, pady=2, sticky='w')
+
+        # Plot label and radio-buttons.
+        self.to_plot_var = IntVar()
+        self.to_plot = True
+        def choose_to_plot():
+            self.to_plot = True if int(self.to_plot_var.get()) else False
+        Label(
+            master=self.settings_frame,
+            font=fonts.regular,
+            bg=colors.app,
+            fg=colors.white,
+            text='Figure:'
+        ).grid(row=3, column=0, padx=5, pady=2, sticky='w')
+        r3 = Radiobutton(
+            master=self.settings_frame,
+            text='True',
+            bg=colors.app,
+            fg=colors.white,
+            activebackground=colors.app,
+            activeforeground=colors.white,
+            selectcolor=colors.black,
+            variable=self.to_plot_var,
+            value=1,
+            command=choose_to_plot
+        )
+        r3.select()
+        r3.grid(row=3, column=1, padx=2, pady=2, sticky='w')
+        r4 = Radiobutton(
+            master=self.settings_frame,
+            text='False',
+            bg=colors.app,
+            fg=colors.white,
+            activebackground=colors.app,
+            activeforeground=colors.white,
+            selectcolor=colors.black,
+            variable=self.to_plot_var,
+            value=0,
+            command=choose_to_plot
+        )
+        r4.deselect()
+        r4.grid(row=3, column=2, padx=2, pady=2, sticky='w')
 
         # Run button.
         self.run_btn = Button(
-            master=self.buttons_frame,
+            master=self,
             width=10,
             bg=colors.button_prime,
             fg=colors.white,
             relief='groove',
             font=fonts.bold,
-            text='Run \u23f5',
+            text='Run',
             command=self.__run
         )
-        self.run_btn.grid(row=0, column=2, padx=0, pady=12, sticky='e')
+        self.run_btn.place(relx=0.13, rely=0.92)
 
     def __browse(self):
         """
@@ -264,31 +327,13 @@ class App(Tk):
         and select a valid CSV input file.
         :return: None.
         """
-        types = (('Text files', "*.csv*"), ('all files', '*.*'))
-        self.file = filedialog.askopenfilename(initialdir=".",
+        types = (('Text files', '*.csv*'), ('all files', '*.*'))
+        path = os.path.abspath(os.getcwd())
+        self.file = filedialog.askopenfilename(initialdir=path,
                                                title='Select a File',
                                                filetypes=types)
         file_name = basename(self.file)
         self.file_name_area.insert('end', file_name)
-
-    def __analyze(self):
-        """
-        This method shows the user a new window that allows him to analyze a
-        range of learning rates and display assisting plots.
-        :return: None.
-        """
-        if self.file:
-            pop_analyze_window(self)
-        else:
-            no_input_message()
-
-    def __set_params(self):
-        """
-        This method shows the user a new window that allows her to change the
-        learning-rate and epochs parameters.
-        :return: None.
-        """
-        pop_params_window(self)
 
     def __run(self):
         """
@@ -296,17 +341,38 @@ class App(Tk):
         is set.
         :return: None.
         """
+
+        # Validate input.
+        try:
+            epochs = int(self.epochs.get().strip())
+            if epochs < 1:
+                raise ValueError
+        except ValueError:
+            title = 'Invalid Input'
+            msg = 'The number of epochs must be a positive integer.'
+            messagebox.showerror(title, msg)
+            return
+
+        # Run the algorithm.
         if self.file:
 
             # Parse.
             data = parse(self.file)
 
             # Train.
-            results = train(data, epochs=self.epochs, learning_rate=self.lr)
+            results = train(data, epochs)
             solutions, model, q_errors, t_errors = results
 
+            # Evaluate.
+            if self.error_type == QE:
+                score_function = quantization_error
+            else:
+                score_function = topological_error
+            best_solution = min(solutions, key=lambda s: score_function(s))
+            best_epoch = solutions.index(best_solution)
+
             # Analyze.
-            town_to_cell, cell_to_vectors = analyze(results=solutions[-1],
+            town_to_cell, cell_to_vectors = analyze(results=best_solution,
                                                     positions=model.positions)
 
             # Output.
@@ -318,12 +384,11 @@ class App(Tk):
             self.console.tag_add('center', '1.0', 'end')
             self.__draw_scale()
             self.__draw_hexagonal_grid(size=5)
-
-            # Evaluate.
-            plot_errors_per_epoch(q_errors, t_errors)
+            if self.to_plot:
+                plot(q_errors, t_errors, best_epoch, self.error_type)
 
         else:
-            no_input_message()
+            self.__browse()
 
     def __draw_scale(self):
         """

@@ -22,7 +22,8 @@ def init_weights(grid, low, high, length):
     """
     for row in grid:
         for cell in row:
-            cell.neuron = np.random.randint(low=low, high=high, size=length)
+            rnd = np.random.randint(low, high, length)
+            cell.neuron = np.array(rnd, dtype=np.float64)
 
 
 def RMSD(V, N):
@@ -33,8 +34,7 @@ def RMSD(V, N):
     :param N: vector number 2 (A Cell's neuron).
     :return:
     """
-    delta = np.floor(V - N)  # to avoid overflow
-    return np.sqrt(np.mean(np.square(delta)))  # better mean then sum.
+    return np.sqrt(np.mean(np.square(V - N)))
 
 
 def find_bmu(grid, vr):
@@ -43,7 +43,7 @@ def find_bmu(grid, vr):
     given vector according to RMSD function.
     :param grid: an instance of HexagonalGrid.
     :param vr: a VotingRecord instance.
-    :return:
+    :return: the best cell (BMU) and the second-best cell (validator).
     """
     candidates = []
     for row in grid:
@@ -56,32 +56,24 @@ def find_bmu(grid, vr):
     return bmu, validator
 
 
-def update_weights(grid, reps, lr):
+def update_weights(grid, reps):
     """
     This function updates the neurons in the grid by applying the update rule
-    as shown in class.
+    suggested in the instructions.
     :param grid: an instance of HexagonalGrid.
     :param reps: a map from VR to its representative (or BMU).
-    :param lr: the learning rate.
-    :return:
+    :return: None. But it updates the weights.
     """
     for vr, (bmu, _) in reps.items():
-        i, j = bmu.pos[0], bmu.pos[1]
-        error = vr.vector - bmu.neuron
-        neighborhood = grid.get_neighborhood_of(i, j, 2)
-        layer1 = neighborhood[1]
-        layer2 = neighborhood[2]
-        addend0 = lr * 0.3 * error
-        addend1 = lr * 0.2 * error
-        addend2 = lr * 0.1 * error
-        grid[i][j].neuron = bmu.neuron + addend0
-        for N in layer1:
-            grid[N.pos[0]][N.pos[1]].neuron = N.neuron + addend1
-        for N in layer2:
-            grid[N.pos[0]][N.pos[1]].neuron = N.neuron + addend2
+        neighborhood = grid.get_neighborhood_of(bmu.pos[0], bmu.pos[1], 2)
+        H = len(neighborhood) / 10
+        for i, layer in neighborhood.items():
+            h = round(H - i * 0.1, 1)
+            for cell in layer:
+                cell.neuron = (1 - h) * cell.neuron + h * vr.vector
 
 
-def train(data, epochs=10, learning_rate=0.1, decay=0.1):
+def train(data, epochs=10):
     """
     This function creates an instance of HexagonalGrid, initializes its neurons
     (or weights), and then trains the model. In the end, it returns the solution
@@ -89,14 +81,11 @@ def train(data, epochs=10, learning_rate=0.1, decay=0.1):
     calculates the errors in each epoch.
     :param data: parsed and preprocessed data from the given input file.
     :param epochs: the number of iterations to run the network.
-    :param learning_rate: the initial learning rate.
-    :param decay: a decay factor for the learning rate.
     :return: a list of solution per epoch, a model and lists of errors.
     """
-    voting_records, _, _ = data
-    lr = learning_rate
+    voting_records, _, max_votes = data
     model = HexagonalGrid(size=5)
-    init_weights(model, 0, 200, len(voting_records[0].vector))
+    init_weights(model, 0, max_votes, len(voting_records[0].vector))
     solutions = []
     q_errors = []
     t_errors = []
@@ -105,8 +94,7 @@ def train(data, epochs=10, learning_rate=0.1, decay=0.1):
         reps = {vr: find_bmu(model, vr) for vr in voting_records}
         q_errors.append(quantization_error(reps))
         t_errors.append(topological_error(reps))
-        lr *= np.exp(-t * decay)
-        update_weights(model, reps, lr)
+        update_weights(model, reps)
         solutions.append(reps)
     return solutions, model, q_errors, t_errors
 
