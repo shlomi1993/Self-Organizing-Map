@@ -89,30 +89,6 @@ def motion(event):
             CANVAS.delete(POPUP_RECT)
 
 
-def info(towns):
-    """
-    This function get the town-to-cell mapper and the global CELLS, which is a
-    cell-to-towns mapper, and creates information structures. It creates a table
-    for the app's console, and prints additional information to the terminal.
-    :param towns: a dictionary that maps a town-name to cells.
-    :return: a PrettyTable of the mapping.
-    """
-    t_towns = PrettyTable()
-    t_towns.align = 'l'
-    t_towns.field_names = ['Town', 'Cluster', 'Cell']
-    for town, (cluster, cell) in towns.items():
-        t_towns.add_row([town, cluster, cell.pos])
-    print('Printing representative cell => represented towns (and cluster)')
-    for pos, (vrs, _) in CELLS.items():
-        if len(vrs) > 0:
-            towns_str = ''
-            for vr in vrs:
-                towns_str += f'{vr.town} ({vr.cluster}), '
-            towns_str = towns_str[:-2]
-            print(pos, '=>', towns_str)
-    return t_towns
-
-
 class App(Tk):
     """
     This class inherits the Tk (-inter) class that creates a basic app with
@@ -378,10 +354,7 @@ class App(Tk):
             # Output.
             global CELLS
             CELLS = cell_to_vectors
-            t_towns = info(town_to_cell)
-            self.console.delete('1.0', 'end')
-            self.console.insert('end', str(t_towns))
-            self.console.tag_add('center', '1.0', 'end')
+            self.__write_info(town_to_cell)
             self.__draw_scale()
             self.__draw_hexagonal_grid(size=5)
             if self.to_plot:
@@ -451,4 +424,22 @@ class App(Tk):
             key = self.__draw_hexagon(x, y, scale[c], len(vrs))
             POLYGONS[key] = (i, j)
         hint = 'Hint: Move your mouse over the hexagons.'
-        self.canvas.create_text(CANVAS_W // 2, CANVAS_H - 15, text=hint, font=fonts.small)
+        x = CANVAS_W // 2
+        y = CANVAS_H - 15
+        self.canvas.create_text(x, y, text=hint, font=fonts.small)
+
+    def __write_info(self, towns):
+        """
+        This method gets a town-to-cell mapper, creates a table with information
+        about the mapping, and writes the table to the app's console.
+        :param towns: a dictionary that maps a town-name to cells.
+        :return: None, but it writes to the app's console.
+        """
+        t_towns = PrettyTable()
+        t_towns.align = 'l'
+        t_towns.field_names = ['Town', 'Cluster', 'Cell']
+        for town, (cluster, cell) in towns.items():
+            t_towns.add_row([town, cluster, cell.pos])
+        self.console.delete('1.0', 'end')
+        self.console.insert('end', str(t_towns))
+        self.console.tag_add('center', '1.0', 'end')
