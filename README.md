@@ -25,12 +25,12 @@ After the program starts, the following window will appear:
 In this window, you can:  
 1. Load an input CSV file (required).
 2. Change the number of epochs to run (default is 10).
-3.  Choose the error measurement method (default is Topological Error).
+3.  Choose the error measurement method (default is Quantization Error).
 4.   Determine whether the program will show a figure (default is True).
 
 Important Notes:
 1. Make sure the input file is valid, i.e., in the form of the attached file "Elec_24.csv".
-2.  Selecting a high number of epochs may make the program look frozen. Patience, the computation is being done in the background and the output will be displayed when it is finished.
+2. Selecting a high number of epochs may make the program look frozen. Patience, the computation is being done in the background and the output will be displayed when it is finished.
 
 ### Output
 The program output is obtained in three forms:

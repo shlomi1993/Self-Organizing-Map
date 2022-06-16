@@ -6,7 +6,7 @@
 
 
 import src.som as som
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 
 
 def quantization_error(solution):
@@ -24,7 +24,7 @@ def quantization_error(solution):
 
 def topological_error(solution):
     """
-    This function counts the number of BMUs that the second-best neuron is not
+    This function counts the number of BMUs that their second-best neuron is not
     their neighbor (counts "bad" mapping).
     :param solution: a map from VRs to BMUs.
     :return: the topological error
@@ -40,11 +40,11 @@ def plot(q_errors, t_errors, best_epoch, evaluator):
     """
     This function creates a plot portraying quantization and topological errors
     for each calculated epoch.
-    :param q_errors: a list of quantization errors.
-    :param t_errors: a list of topological errors.
+    :param q_errors: a list of quantization error per epoch.
+    :param t_errors: a list of topological error per epoch.
     :param best_epoch: the epoch in which the best solution was found.
     :param evaluator: the evaluation method according to which the best
-                      solution was determined
+                      solution was determined.
     :return: None.
     """
     title = f'Error per Epochs\nBest epoch by {evaluator} was {best_epoch}'

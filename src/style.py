@@ -28,7 +28,7 @@ class Colors:
         self.white = '#ffffff'
 
 
-# The whole program can use one instance of each class.
+# This instances can be accessed from the whole program.
 fonts = Fonts()
 colors = Colors()
 

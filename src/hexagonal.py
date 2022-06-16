@@ -26,7 +26,7 @@ class Cell:
         This method allows printing and object from this class.
         :return: printing string.
         """
-        return f'Cell {self.pos} holds: {self.neuron}'
+        return f'Cell {self.pos} holds: neuron{self.neuron}'
 
     def is_in(self, group):
         """
@@ -42,13 +42,13 @@ class Cell:
 
 class HexagonalGrid:
     """
-    This data-structure was designed to complete the task. It is made up of
-    cells, row-by row.
+    This data-structure was designed to complete the assignment. It is made up
+    of cells, row-by row.
     """
 
     def __init__(self, size):
         """
-        Constructor. Creates an instance of a Hexagonal grid.
+        Constructor. Creates an instance of a HexagonalGrid.
         :param size: the number of cells in the edge of the grid.
         """
 
@@ -72,7 +72,7 @@ class HexagonalGrid:
                 self.rows[i - 1][j].neighbors.append(new_row[j + 1])
             self.rows.append(new_row)
 
-        # Once 'size' rows created, for each row, create the next row with onr
+        # Once 'size' rows created, for each row, create the next row with one
         # less cell, and connect each of the new cells between themselves and
         # their parents.
         max_size = len(self.rows[-1])

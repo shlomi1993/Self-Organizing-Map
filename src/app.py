@@ -41,7 +41,7 @@ def pop(pos, x, y):
     :param pos: the position of the hovered hexagon.
     :param x: the x-coordinate of the mouse pointer.
     :param y: the y-coordinate of the mouse pointer.
-    :return:
+    :return: None.
     """
     global POPUP_TEXT, POPUP_RECT, CELLS
     (i, j) = pos
@@ -123,6 +123,7 @@ class App(Tk):
         global CANVAS
         CANVAS = self.canvas
         self.canvas.bind('<Motion>', motion)
+        self.canvas.config(bg=colors.io_bg)
 
         # Create a console
         self.console = Text(
@@ -204,7 +205,7 @@ class App(Tk):
 
         # Error type label and radio-buttons.
         self.error_type_var = IntVar()
-        self.error_type = TE
+        self.error_type = QE
         Label(
             master=self.settings_frame,
             font=fonts.regular,
@@ -226,7 +227,7 @@ class App(Tk):
             value=0,
             command=choose_error_type
         )
-        r1.deselect()
+        r1.select()
         r1.grid(row=1, column=1, padx=2, pady=2, sticky='w')
         r2 = Radiobutton(
             master=self.settings_frame,
@@ -240,7 +241,7 @@ class App(Tk):
             value=1,
             command=choose_error_type
         )
-        r2.select()
+        r2.deselect()
         r2.grid(row=1, column=2, padx=2, pady=2, sticky='w')
 
         # Plot label and radio-buttons.
@@ -309,6 +310,7 @@ class App(Tk):
                                                title='Select a File',
                                                filetypes=types)
         file_name = basename(self.file)
+        self.file_name_area.delete('1.0', 'end')
         self.file_name_area.insert('end', file_name)
 
     def __run(self):
@@ -355,6 +357,7 @@ class App(Tk):
             global CELLS
             CELLS = cell_to_vectors
             self.__write_info(town_to_cell)
+            self.canvas.config(bg=colors.white)
             self.__draw_scale()
             self.__draw_hexagonal_grid(size=5)
             if self.to_plot:
@@ -362,6 +365,8 @@ class App(Tk):
 
         else:
             self.__browse()
+            if self.file:
+                self.__run()
 
     def __draw_scale(self):
         """

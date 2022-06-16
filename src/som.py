@@ -31,8 +31,8 @@ def RMSD(V, N):
     Stands for Root-Mean-Square-Deviation. This functions calculates the RMS of
     the difference between to given vectors using NumPy.
     :param V: vector number 1 (from a VotingRecord).
-    :param N: vector number 2 (A Cell's neuron).
-    :return:
+    :param N: vector number 2 (Cell's neuron).
+    :return: The root-mean-square of V - N as float.
     """
     return np.sqrt(np.mean(np.square(V - N)))
 
@@ -52,7 +52,7 @@ def find_bmu(grid, vr):
             candidates.append((cell, distance))
     candidates.sort(key=lambda tup: tup[1])
     bmu = candidates[0][0]
-    validator = candidates[1][0]  # Second best for Topo. Error calculation.
+    validator = candidates[1][0]  # 2nd-best for Topological Error calculation.
     return bmu, validator
 
 
@@ -89,6 +89,8 @@ def train(data, epochs=10):
     solutions = []
     q_errors = []
     t_errors = []
+    # voting_records.sort(reverse=False, key=lambda v: np.sum(v.vector))
+    # voting_records.sort(reverse=True, key=lambda v: np.sum(v.vector))
     for t in range(epochs):
         np.random.shuffle(voting_records)  # to avoid bias.
         reps = {vr: find_bmu(model, vr) for vr in voting_records}
